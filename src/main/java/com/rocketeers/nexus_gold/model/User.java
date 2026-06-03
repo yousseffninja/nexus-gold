@@ -1,5 +1,6 @@
 package com.rocketeers.nexus_gold.model;
 
+import com.rocketeers.nexus_gold.enums.Roles;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +38,7 @@ public class User implements UserDetails {
     private String password;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.ORDINAL)
     private Roles role;
 
     @Column(
@@ -77,4 +79,3 @@ public class User implements UserDetails {
     }
 }
 
-enum Roles { ADMIN, SELLER, USER; }
