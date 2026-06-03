@@ -1,0 +1,9 @@
+package com.rocketeers.nexus_gold.service;
+
+import com.rocketeers.nexus_gold.dto.*;
+
+public interface AuthenticationService {
+    SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest);
+    JwtAuthenticationResponse signIn(SignInRequest signInRequest);
+    JwtAuthenticationResponse refreshToken(RefreshTokenRequest refreshTokenRequest);
+}
