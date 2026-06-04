@@ -1,5 +1,6 @@
 package com.rocketeers.nexus_gold.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.rocketeers.nexus_gold.enums.Roles;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,6 +36,7 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
@@ -47,6 +50,18 @@ public class User implements UserDetails {
             nullable = false
     )
     private String displayName;
+
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default false")
+    private boolean emailVerified = false;
+
+    @JsonIgnore
+    @Column(name = "email_verification_code")
+    private String emailVerificationCode;
+
+    @JsonIgnore
+    @Column(name = "email_verification_code_expires_at")
+    private LocalDateTime emailVerificationCodeExpiresAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -78,4 +93,3 @@ public class User implements UserDetails {
         return UserDetails.super.isEnabled();
     }
 }
-

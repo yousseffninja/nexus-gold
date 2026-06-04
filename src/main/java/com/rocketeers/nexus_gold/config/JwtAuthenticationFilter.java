@@ -1,5 +1,6 @@
 package com.rocketeers.nexus_gold.config;
 
+import com.rocketeers.nexus_gold.model.User;
 import com.rocketeers.nexus_gold.service.JwtService;
 import com.rocketeers.nexus_gold.service.UserService;
 import io.micrometer.common.util.StringUtils;
@@ -39,12 +40,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String userEmail;
-        
+
         String path = request.getServletPath();
-        
+
         // Skip JWT filtering for Swagger and actuator endpoints
-        if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || 
-            path.startsWith("/webjars") || path.startsWith("/swagger-resources")) {
+        if (path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") ||
+                path.startsWith("/webjars") || path.startsWith("/swagger-resources")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -61,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = userService
                     .userDetailsService()
                     .loadUserByUsername(userEmail);
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+            if (isEmailVerified(userDetails) && jwtService.isTokenValid(jwt, userDetails)) {
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 
                 UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
@@ -78,4 +79,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
 
     }
+
+    private boolean isEmailVerified(UserDetails userDetails) {
+        return userDetails instanceof User user && user.isEmailVerified();
+    }
+
 }
