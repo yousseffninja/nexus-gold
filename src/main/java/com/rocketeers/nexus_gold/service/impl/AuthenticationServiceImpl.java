@@ -123,15 +123,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (!user.isEmailVerified()) {
-            return JwtAuthenticationResponse.builder()
-                    .success(false)
-                    .message("Please verify your email before refreshing tokens")
-                    .accessToken(null)
-                    .refreshToken(null)
-                    .build();
-        }
-
         var newAccessToken = jwtService.generateToken(user);
         return JwtAuthenticationResponse.builder()
                 .success(true)
@@ -213,13 +204,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("User not found")
-                    .build();
-        }
-
-        if (user.isEmailVerified()) {
-            return EmailVerificationResponse.builder()
-                    .success(true)
-                    .message("Email is already verified")
                     .build();
         }
 
