@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@SecurityRequirements
 @Tag(name = "Authentication", description = "APIs for user authentication including signup, signin, and token refresh")
 public class AuthenticationController {
 
@@ -58,6 +61,16 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
                             .success(false)
+                            .message("Invalid credentials")
+                            .accessToken(null)
+                            .refreshToken(null)
+                            .build()
+            );
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    JwtAuthenticationResponse.builder()
+                            .success(false)
+                            .message("Invalid credentials")
                             .accessToken(null)
                             .refreshToken(null)
                             .build()
@@ -66,6 +79,7 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
                             .success(false)
+                            .message("Invalid credentials")
                             .accessToken(null)
                             .refreshToken(null)
                             .build()
@@ -91,6 +105,7 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
                             .success(false)
+                            .message("Invalid or expired refresh token")
                             .accessToken(null)
                             .refreshToken(null)
                             .build()
@@ -99,6 +114,7 @@ public class AuthenticationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
                             .success(false)
+                            .message("Invalid or expired refresh token")
                             .accessToken(null)
                             .refreshToken(null)
                             .build()
@@ -106,5 +122,34 @@ public class AuthenticationController {
         }
     }
 
-}
+    @PostMapping("/send-verification-code")
+    @Operation(summary = "Send email verification code", description = "Send a new email verification code to a registered user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Verification code sent", content = @Content(schema = @Schema(implementation = EmailVerificationResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or email could not be sent")
+    })
+    public ResponseEntity<EmailVerificationResponse> sendVerificationCode(@RequestBody EmailVerificationCodeRequest request) {
+        EmailVerificationResponse response = authenticationService.sendEmailVerificationCode(request);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
 
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(summary = "Verify email", description = "Verify a registered user's email using the code sent to Gmail")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Email verified", content = @Content(schema = @Schema(implementation = EmailVerificationResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired verification code")
+    })
+    public ResponseEntity<EmailVerificationResponse> verifyEmail(@RequestBody VerifyEmailRequest request) {
+        EmailVerificationResponse response = authenticationService.verifyEmail(request);
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+}

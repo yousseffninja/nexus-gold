@@ -6,4 +6,6 @@ public interface AuthenticationService {
     SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest);
     JwtAuthenticationResponse signIn(SignInRequest signInRequest);
     JwtAuthenticationResponse refreshToken(RefreshTokenRequest refreshTokenRequest);
+    EmailVerificationResponse sendEmailVerificationCode(EmailVerificationCodeRequest request);
+    EmailVerificationResponse verifyEmail(VerifyEmailRequest request);
 }
