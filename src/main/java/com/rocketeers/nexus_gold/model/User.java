@@ -63,6 +63,14 @@ public class User implements UserDetails {
     @Column(name = "email_verification_code_expires_at")
     private LocalDateTime emailVerificationCodeExpiresAt;
 
+    @JsonIgnore
+    @Column(name = "password_Reset_code")
+    private String passwordResetCode;
+
+    @JsonIgnore
+    @Column(name = "password_Reset_code_expires_at")
+    private LocalDateTime passwordResetCodeExpiresAt;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.name()));

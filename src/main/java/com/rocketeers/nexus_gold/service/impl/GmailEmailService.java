@@ -13,6 +13,22 @@ public class GmailEmailService implements EmailService {
 
     private final JavaMailSender mailSender;
     private final String fromEmail;
+    private String verificationHtmlMailContent="""
+                Your Nexus Gold verification code is:
+
+                %s
+
+                This code expires soon. If you did not create this account, ignore this email.
+                """;
+
+    private String passwordResetHtmlMailContent="""
+                Your Nexus Gold password Reset code is:
+
+                %s
+
+                This code expires soon. If you did not create this account, ignore this email.
+                """;
+
 
     public GmailEmailService(JavaMailSender mailSender, @Value("${spring.mail.username}") String fromEmail) {
         this.mailSender = mailSender;
@@ -27,7 +43,7 @@ public class GmailEmailService implements EmailService {
             helper.setFrom(fromEmail);
             helper.setTo(to);
             helper.setSubject("Nexus Gold email verification code");
-            helper.setText(buildPlainTextEmail(code), buildHtmlEmail(code));
+            helper.setText(buildPlainTextEmail(code ,verificationHtmlMailContent), buildHtmlEmail(code ,"Secure Verification Code"));
 
             mailSender.send(message);
         } catch (MessagingException ex) {
@@ -35,17 +51,29 @@ public class GmailEmailService implements EmailService {
         }
     }
 
-    private static String buildPlainTextEmail(String code) {
-        return """
-                Your Nexus Gold verification code is:
 
-                %s
+    @Override
+    public void sendPasswordResetCode(String to, String code) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Nexus Gold password Reset Code");
+            helper.setText(buildPlainTextEmail(code, passwordResetHtmlMailContent), buildHtmlEmail(code ,"Secure Password Reset Code"));
 
-                This code expires soon. If you did not create this account, ignore this email.
-                """.formatted(code);
+            mailSender.send(message);
+        } catch (MessagingException ex) {
+            throw new IllegalStateException("Failed to reset password", ex);
+        }
     }
 
-    private static String buildHtmlEmail(String code) {
+    private static String buildPlainTextEmail(String code , String text) {
+        return text.formatted(code);
+    }
+
+    private static String buildHtmlEmail(String code , String text) {
+        String labelTitel =escapeHtml(text) ;
         String safeCode = escapeHtml(code);
 
         return """
@@ -72,7 +100,7 @@ public class GmailEmailService implements EmailService {
                         <h1>NexusGold</h1>
                     </div>
                     <div class="content">
-                        <div class="code-label">Secure Verification Code</div>
+                        <div class="code-label">{{labelTitel}}</div>
                         <p style="color: #ffffff; font-size: 18px; margin-bottom: 24px;">Confirm your email address</p>
                         <div class="code-box">{{verificationCode}}</div>
                         <p style="margin-top: 24px;">Enter this code in the app to finish verifying your account. This code expires in 10 minutes.</p>
@@ -84,7 +112,8 @@ public class GmailEmailService implements EmailService {
                 </div>
             </body>
             </html>
-            """.replace("{{verificationCode}}", safeCode);
+            """.replace("{{verificationCode}}", safeCode).
+                replace("{{labelTitel}}", labelTitel);
     }
 
     private static String escapeHtml(String value) {

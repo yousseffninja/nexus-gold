@@ -152,4 +152,42 @@ public class AuthenticationController {
         return ResponseEntity.badRequest().body(response);
     }
 
+
+
+    @PostMapping("/forget-password")
+    @Operation(summary = "forget password", description = "Send a password reset code to the user's email")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password reset code sent if account exists", content = @Content(schema = @Schema(implementation = PasswordResetResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or email could not be sent")
+    })
+    public ResponseEntity<PasswordResetResponse> forgetPassword( @RequestBody ForgetPasswordRequest request) {
+
+        PasswordResetResponse response = authenticationService.forgetPassword(request);
+
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.badRequest().body(response);
+
+    }
+
+
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password", description = "Reset a user's password using the code sent to email")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password reset successfully", content = @Content(schema = @Schema(implementation = PasswordResetResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or email could not be sent")
+    })
+    public ResponseEntity<PasswordResetResponse> resetPassword( @RequestBody ResetPasswordRequest request) {
+
+        PasswordResetResponse response = authenticationService.resetPassword(request);
+
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.badRequest().body(response);
+
+    }
+
 }
