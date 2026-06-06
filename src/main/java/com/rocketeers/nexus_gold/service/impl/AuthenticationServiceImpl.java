@@ -38,6 +38,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Value("${app.email.verification.expiration-minutes:15}")
     private long emailVerificationExpirationMinutes;
 
+    @Value("${app.password-reset.expiration-minutes:15}")
+    private long passwordResetExpirationMinutes;
+
     public SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest) {
 
         if (userRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
@@ -238,6 +241,92 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .message("Email verified successfully")
                 .build();
     }
+
+    @Override
+    public PasswordResetResponse forgetPassword(ForgetPasswordRequest request){
+       String email = normalize(request==null ? null : request.getEmail());
+
+       if (!hasText(email)) {
+
+           return  PasswordResetResponse.builder()
+                   .success(false).message(" Email is require").build();
+       }
+
+       User user = userRepository.findByEmail(email).orElse(null);
+
+       if (user == null) {
+           return PasswordResetResponse.builder()
+                   .success(false).message("Email not found").build();
+       }
+
+       String resetCode = generateVerificationCode();
+
+       user.setPasswordResetCode(passwordEncoder.encode(resetCode));
+       user.setPasswordResetCodeExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
+       userRepository.save(user);
+
+       try{
+           emailService.sendPasswordResetCode(user.getEmail(), resetCode);
+       } catch (MailException e){
+           return PasswordResetResponse.builder().success(false).message("Failed to send password reset code. Please try again later.").build();
+
+       }
+
+        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").build();
+
+    }
+
+
+    @Override
+    public PasswordResetResponse resetPassword(ResetPasswordRequest request){
+        String email = normalize(request == null ? null : request.getEmail());
+        String code = normalize(request == null ? null : request.getCode());
+        String newPassword = normalize(request == null ? null : request.getNewPassword());
+
+        if (!hasText(email)) {
+
+            return PasswordResetResponse.builder()
+                    .success(false).message("Email is required").build();
+        }
+
+        if (!hasText(code)) {
+            return PasswordResetResponse.builder()
+                    .success(false).message("Code is required").build();
+        }
+
+        if (!hasText(newPassword)) {
+            return PasswordResetResponse.builder()
+                    .success(false).message("New password is required").build();
+        }
+
+
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.getPasswordResetCode() == null || user.getPasswordResetCodeExpiresAt() == null) {
+            return PasswordResetResponse.builder().success(false).message("Something went wrong Please try again later ").build();
+
+
+        }
+
+        if (LocalDateTime.now().isAfter(user.getPasswordResetCodeExpiresAt())) {
+            user.setPasswordResetCode(null);
+            user.setPasswordResetCodeExpiresAt(null);
+            return PasswordResetResponse.builder().success(false).message("code has expired").build();
+        }
+
+        if (!passwordEncoder.matches(code, user.getPasswordResetCode())) {
+            return PasswordResetResponse.builder().success(false).message("Invalid verification code").build();
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+
+        user.setPasswordResetCode(null);
+        user.setPasswordResetCodeExpiresAt(null);
+        userRepository.save(user);
+
+        return PasswordResetResponse.builder().success(true).message("Password reset successfully").build();
+    }
+
+
 
     private String generateVerificationCode() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));

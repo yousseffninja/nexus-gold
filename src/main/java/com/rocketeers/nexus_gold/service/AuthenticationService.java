@@ -8,4 +8,8 @@ public interface AuthenticationService {
     JwtAuthenticationResponse refreshToken(RefreshTokenRequest refreshTokenRequest);
     EmailVerificationResponse sendEmailVerificationCode(EmailVerificationCodeRequest request);
     EmailVerificationResponse verifyEmail(VerifyEmailRequest request);
+
+    PasswordResetResponse forgetPassword(ForgetPasswordRequest request);
+
+    PasswordResetResponse resetPassword(ResetPasswordRequest request);
 }
