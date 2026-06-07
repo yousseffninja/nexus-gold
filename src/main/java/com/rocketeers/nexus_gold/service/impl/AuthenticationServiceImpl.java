@@ -7,6 +7,7 @@ import com.rocketeers.nexus_gold.repository.UserRepository;
 import com.rocketeers.nexus_gold.service.AuthenticationService;
 import com.rocketeers.nexus_gold.service.EmailService;
 import com.rocketeers.nexus_gold.service.JwtService;
+import com.rocketeers.nexus_gold.service.Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
@@ -40,6 +41,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${app.password-reset.expiration-minutes:15}")
     private long passwordResetExpirationMinutes;
+
+    private Util util = new Util();
 
     public SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest) {
 
@@ -137,8 +140,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public EmailVerificationResponse sendEmailVerificationCode(EmailVerificationCodeRequest request) {
-        String email = normalize(request == null ? null : request.getEmail());
-        if (!hasText(email)) {
+        String email = util.normalize(request == null ? null : request.getEmail());
+        if (!util.hasText(email)) {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("Email is required")
@@ -183,17 +186,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public EmailVerificationResponse verifyEmail(VerifyEmailRequest request) {
-        String email = normalize(request == null ? null : request.getEmail());
-        String code = normalize(request == null ? null : request.getCode());
+        String email = util.normalize(request == null ? null : request.getEmail());
+        String code = util.normalize(request == null ? null : request.getCode());
 
-        if (!hasText(email)) {
+        if (!util.hasText(email)) {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("Email is required")
                     .build();
         }
 
-        if (!hasText(code)) {
+        if (!util.hasText(code)) {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("Verification code is required")
@@ -244,9 +247,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public PasswordResetResponse forgetPassword(ForgetPasswordRequest request){
-       String email = normalize(request==null ? null : request.getEmail());
+       String email = util.normalize(request==null ? null : request.getEmail());
 
-       if (!hasText(email)) {
+       if (!util.hasText(email)) {
 
            return  PasswordResetResponse.builder()
                    .success(false).message(" Email is require").build();
@@ -279,22 +282,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
-        String email = normalize(request == null ? null : request.getEmail());
-        String code = normalize(request == null ? null : request.getCode());
-        String newPassword = normalize(request == null ? null : request.getNewPassword());
+        String email = util.normalize(request == null ? null : request.getEmail());
+        String code = util.normalize(request == null ? null : request.getCode());
+        String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
-        if (!hasText(email)) {
+        if (!util.hasText(email)) {
 
             return PasswordResetResponse.builder()
                     .success(false).message("Email is required").build();
         }
 
-        if (!hasText(code)) {
+        if (!util.hasText(code)) {
             return PasswordResetResponse.builder()
                     .success(false).message("Code is required").build();
         }
 
-        if (!hasText(newPassword)) {
+        if (!util.hasText(newPassword)) {
             return PasswordResetResponse.builder()
                     .success(false).message("New password is required").build();
         }
@@ -337,12 +340,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.setEmailVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(emailVerificationExpirationMinutes));
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
 
-    private String normalize(String value) {
-        return value == null ? null : value.trim();
-    }
 
 }
