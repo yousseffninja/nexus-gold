@@ -5,6 +5,7 @@ import com.rocketeers.nexus_gold.dto.ChangePasswordResponse;
 import com.rocketeers.nexus_gold.model.User;
 import com.rocketeers.nexus_gold.repository.UserRepository;
 import com.rocketeers.nexus_gold.service.UserService;
+import com.rocketeers.nexus_gold.service.Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +21,8 @@ public class UserServiceImpl implements UserService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private Util util = new Util();
+
     @Override
     public UserDetailsService userDetailsService() {
         return new UserDetailsService() {
@@ -33,6 +36,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ChangePasswordResponse changePassword(User user, ChangePasswordRequest request) {
+        String currentPassword = util.normalize(request == null ? null :request.getCurrentPassword());
+        String newPassword = util.normalize(request == null ? null :request.getNewPassword());
+
         if (user == null) {
             return ChangePasswordResponse.builder()
                     .success(false)
@@ -40,14 +46,14 @@ public class UserServiceImpl implements UserService {
                     .build();
         }
 
-        if (request == null || !hasText(request.getCurrentPassword())) {
+        if (request == null || !util.hasText(request.getCurrentPassword())) {
             return ChangePasswordResponse.builder()
                     .success(false)
                     .message("Current password is required")
                     .build();
         }
 
-        if (!hasText(request.getNewPassword())) {
+        if (!util.hasText(request.getNewPassword())) {
             return ChangePasswordResponse.builder()
                     .success(false)
                     .message("New password is required")
@@ -87,8 +93,6 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
+
 
 }
