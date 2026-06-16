@@ -12,4 +12,5 @@ public interface AuthenticationService {
     PasswordResetResponse forgetPassword(ForgetPasswordRequest request);
 
     PasswordResetResponse resetPassword(ResetPasswordRequest request);
+
 }
