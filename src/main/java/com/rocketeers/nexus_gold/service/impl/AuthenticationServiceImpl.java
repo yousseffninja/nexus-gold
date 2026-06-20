@@ -46,7 +46,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     public SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest) {
 
-        if (userRepository.findByEmail(signUpRequest.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(signUpRequest.getEmail().toLowerCase()).isPresent()) {
             return SignUpAuthenticationResponse.builder()
                     .success(false)
                     .message("Email is already in use")
@@ -63,7 +63,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         User user = new User();
-        user.setEmail(signUpRequest.getEmail());
+        user.setEmail(signUpRequest.getEmail().toLowerCase());
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
         user.setDisplayName(signUpRequest.getDisplayName());
@@ -78,7 +78,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String message = "User registered successfully. Verification code sent to email.";
 
         try {
-            emailService.sendVerificationCode(savedUser.getEmail(), verificationCode);
+            emailService.sendVerificationCode(savedUser.getEmail().toLowerCase(), verificationCode);
         } catch (MailException e) {
             message = "User registered successfully, but verification email could not be sent. Please use send-verification-code after mail configuration is fixed.";
         }
@@ -93,13 +93,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public JwtAuthenticationResponse signIn(SignInRequest signInRequest) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        signInRequest.getEmail(),
+                        signInRequest.getEmail().toLowerCase(),
                         signInRequest.getPassword()
                 )
         );
 
         var user = userRepository.findByEmail(
-                signInRequest.getEmail()
+                signInRequest.getEmail().toLowerCase()
         ).orElseThrow(
                 () -> new IllegalArgumentException("Invalid credentials")
         );
@@ -140,7 +140,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public EmailVerificationResponse sendEmailVerificationCode(EmailVerificationCodeRequest request) {
-        String email = util.normalize(request == null ? null : request.getEmail());
+        String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
         if (!util.hasText(email)) {
             return EmailVerificationResponse.builder()
                     .success(false)
@@ -170,7 +170,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         userRepository.save(user);
 
         try {
-            emailService.sendVerificationCode(user.getEmail(), verificationCode);
+            emailService.sendVerificationCode(user.getEmail().toLowerCase(), verificationCode);
         } catch (MailException e) {
             return EmailVerificationResponse.builder()
                     .success(false)
@@ -186,7 +186,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public EmailVerificationResponse verifyEmail(VerifyEmailRequest request) {
-        String email = util.normalize(request == null ? null : request.getEmail());
+        String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
         String code = util.normalize(request == null ? null : request.getCode());
 
         if (!util.hasText(email)) {
@@ -247,7 +247,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public PasswordResetResponse forgetPassword(ForgetPasswordRequest request){
-       String email = util.normalize(request==null ? null : request.getEmail());
+       String email = util.normalize(request==null ? null : request.getEmail().toLowerCase());
 
        if (!util.hasText(email)) {
 
@@ -269,7 +269,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
        userRepository.save(user);
 
        try{
-           emailService.sendPasswordResetCode(user.getEmail(), resetCode);
+           emailService.sendPasswordResetCode(user.getEmail().toLowerCase(), resetCode);
        } catch (MailException e){
            return PasswordResetResponse.builder().success(false).message("Failed to send password reset code. Please try again later.").build();
 
@@ -282,7 +282,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
-        String email = util.normalize(request == null ? null : request.getEmail());
+        String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
         String code = util.normalize(request == null ? null : request.getCode());
         String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
