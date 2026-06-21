@@ -263,11 +263,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
        }
 
        String resetCode = generateVerificationCode();
-       String resetToken = generateResetToken();
 
        user.setPasswordResetCode(passwordEncoder.encode(resetCode));
        user.setPasswordResetCodeExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
-       user.setPasswordResetToken(resetToken);
        userRepository.save(user);
 
        try{
@@ -277,26 +275,57 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
        }
 
-        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").passwordResetToken(resetToken).build();
+        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").build();
 
+    }
+
+    @Override
+    public VerifyResetCodeResponse verifyResetCode(VerifyResetCodeRequest request){
+        String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
+        String code = util.normalize(request == null ? null : request.getCode());
+
+        if (!util.hasText(email)) {
+            return VerifyResetCodeResponse.builder()
+                    .success(false).message("Email is required").build();
+        }
+
+        if (!util.hasText(code)) {
+            return VerifyResetCodeResponse.builder()
+                    .success(false).message("Code is required").build();
+        }
+
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.getPasswordResetCode() == null || user.getPasswordResetCodeExpiresAt() == null) {
+            return VerifyResetCodeResponse.builder().success(false).message("Something went wrong. Please try again later.").build();
+        }
+
+        if (LocalDateTime.now().isAfter(user.getPasswordResetCodeExpiresAt())) {
+            user.setPasswordResetCode(null);
+            user.setPasswordResetCodeExpiresAt(null);
+            userRepository.save(user);
+            return VerifyResetCodeResponse.builder().success(false).message("Code has expired. Please request a new code.").build();
+        }
+
+        if (!passwordEncoder.matches(code, user.getPasswordResetCode())) {
+            return VerifyResetCodeResponse.builder().success(false).message("Invalid verification code").build();
+        }
+
+        String resetToken = generateResetToken();
+        user.setPasswordResetToken(resetToken);
+        userRepository.save(user);
+
+        return VerifyResetCodeResponse.builder().success(true).message("Code verified successfully").passwordResetToken(resetToken).build();
     }
 
 
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
         String passwordResetToken = util.normalize(request == null ? null : request.getPasswordResetToken());
-        String code = util.normalize(request == null ? null : request.getCode());
         String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
         if (!util.hasText(passwordResetToken)) {
-
             return PasswordResetResponse.builder()
                     .success(false).message("Password reset token is required").build();
-        }
-
-        if (!util.hasText(code)) {
-            return PasswordResetResponse.builder()
-                    .success(false).message("Code is required").build();
         }
 
         if (!util.hasText(newPassword)) {
@@ -304,23 +333,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .success(false).message("New password is required").build();
         }
 
-
         User user = userRepository.findByPasswordResetToken(passwordResetToken).orElse(null);
-        if (user == null || user.getPasswordResetCode() == null || user.getPasswordResetCodeExpiresAt() == null) {
-            return PasswordResetResponse.builder().success(false).message("Something went wrong Please try again later ").build();
-
-
-        }
-
-        if (LocalDateTime.now().isAfter(user.getPasswordResetCodeExpiresAt())) {
-            user.setPasswordResetCode(null);
-            user.setPasswordResetCodeExpiresAt(null);
-            user.setPasswordResetToken(null);
-            return PasswordResetResponse.builder().success(false).message("code has expired").build();
-        }
-
-        if (!passwordEncoder.matches(code, user.getPasswordResetCode())) {
-            return PasswordResetResponse.builder().success(false).message("Invalid verification code").build();
+        if (user == null) {
+            return PasswordResetResponse.builder().success(false).message("Invalid or expired token").build();
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));

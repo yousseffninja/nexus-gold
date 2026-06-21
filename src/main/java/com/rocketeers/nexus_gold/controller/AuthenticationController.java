@@ -168,13 +168,28 @@ public class AuthenticationController {
 
     }
 
+    @PostMapping("/verify-reset-code")
+    @Operation(summary = "Verify reset code", description = "Verify the password reset code and generate a token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Code verified successfully", content = @Content(schema = @Schema(implementation = VerifyResetCodeResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired code")
+    })
+    public ResponseEntity<VerifyResetCodeResponse> verifyResetCode(@RequestBody VerifyResetCodeRequest request) {
 
+        VerifyResetCodeResponse response = authenticationService.verifyResetCode(request);
+
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        }
+        return ResponseEntity.badRequest().body(response);
+
+    }
 
     @PostMapping("/reset-password")
-    @Operation(summary = "Reset password", description = "Reset a user's password using the code sent to email")
+    @Operation(summary = "Reset password", description = "Reset a user's password using the token obtained from verify-reset-code")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Password reset successfully", content = @Content(schema = @Schema(implementation = PasswordResetResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request or email could not be sent")
+            @ApiResponse(responseCode = "400", description = "Invalid request or token")
     })
     public ResponseEntity<PasswordResetResponse> resetPassword( @RequestBody ResetPasswordRequest request) {
 

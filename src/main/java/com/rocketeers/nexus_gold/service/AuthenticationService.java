@@ -11,6 +11,8 @@ public interface AuthenticationService {
 
     PasswordResetResponse forgetPassword(ForgetPasswordRequest request);
 
+    VerifyResetCodeResponse verifyResetCode(VerifyResetCodeRequest request);
+
     PasswordResetResponse resetPassword(ResetPasswordRequest request);
 
 }
