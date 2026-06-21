@@ -14,4 +14,5 @@ public class PasswordResetResponse {
 
     private boolean success;
     private String message;
+    private String passwordResetToken;
 }

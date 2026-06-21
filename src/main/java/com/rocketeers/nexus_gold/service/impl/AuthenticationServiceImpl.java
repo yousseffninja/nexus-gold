@@ -263,9 +263,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
        }
 
        String resetCode = generateVerificationCode();
+       String resetToken = generateResetToken();
 
        user.setPasswordResetCode(passwordEncoder.encode(resetCode));
        user.setPasswordResetCodeExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
+       user.setPasswordResetToken(resetToken);
        userRepository.save(user);
 
        try{
@@ -275,21 +277,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
        }
 
-        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").build();
+        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").passwordResetToken(resetToken).build();
 
     }
 
 
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
-        String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
+        String passwordResetToken = util.normalize(request == null ? null : request.getPasswordResetToken());
         String code = util.normalize(request == null ? null : request.getCode());
         String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
-        if (!util.hasText(email)) {
+        if (!util.hasText(passwordResetToken)) {
 
             return PasswordResetResponse.builder()
-                    .success(false).message("Email is required").build();
+                    .success(false).message("Password reset token is required").build();
         }
 
         if (!util.hasText(code)) {
@@ -303,7 +305,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
 
-        User user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findByPasswordResetToken(passwordResetToken).orElse(null);
         if (user == null || user.getPasswordResetCode() == null || user.getPasswordResetCodeExpiresAt() == null) {
             return PasswordResetResponse.builder().success(false).message("Something went wrong Please try again later ").build();
 
@@ -313,6 +315,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         if (LocalDateTime.now().isAfter(user.getPasswordResetCodeExpiresAt())) {
             user.setPasswordResetCode(null);
             user.setPasswordResetCodeExpiresAt(null);
+            user.setPasswordResetToken(null);
             return PasswordResetResponse.builder().success(false).message("code has expired").build();
         }
 
@@ -324,6 +327,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         user.setPasswordResetCode(null);
         user.setPasswordResetCodeExpiresAt(null);
+        user.setPasswordResetToken(null);
         userRepository.save(user);
 
         return PasswordResetResponse.builder().success(true).message("Password reset successfully").build();
@@ -333,6 +337,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private String generateVerificationCode() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+    }
+
+    private String generateResetToken() {
+        return java.util.UUID.randomUUID().toString();
     }
 
     private void setEmailVerificationCode(User user, String verificationCode) {

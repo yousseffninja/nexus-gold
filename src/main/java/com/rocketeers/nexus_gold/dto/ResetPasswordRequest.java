@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 public class ResetPasswordRequest {
 
-    @Schema(example = "example@mail.com", description ="Email of user should be exist")
-    private String email;
+    @Schema(example = "abc123xyz", description ="Password reset token to identify the user")
+    private String passwordResetToken;
 
     @Schema(example = "12345", description = "code must be active ")
     private String code;
