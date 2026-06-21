@@ -64,6 +64,10 @@ public class User implements UserDetails {
     private LocalDateTime emailVerificationCodeExpiresAt;
 
     @JsonIgnore
+    @Column(name = "password_Reset_token")
+    private String passwordResetToken;
+
+    @JsonIgnore
     @Column(name = "password_Reset_code")
     private String passwordResetCode;
 
