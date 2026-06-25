@@ -1,4 +1,4 @@
-package com.rocketeers.nexus_gold.dto;
+package com.rocketeers.nexus_gold.dto.verify_rest_code;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class JwtAuthenticationResponse {
+public class VerifyResetCodeResponse {
+
     private boolean success;
     private String message;
-    private String accessToken;
-    private String refreshToken;
+    private String passwordResetToken;
 }

@@ -1,4 +1,5 @@
-package com.rocketeers.nexus_gold.dto;
+package com.rocketeers.nexus_gold.dto.authenrication;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,8 +10,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SignUpAuthenticationResponse {
+public class PasswordResetResponse {
+
     private boolean success;
     private String message;
-    private Object data;
+    private String passwordResetToken;
 }

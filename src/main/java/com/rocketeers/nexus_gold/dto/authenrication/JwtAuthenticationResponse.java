@@ -1,4 +1,4 @@
-package com.rocketeers.nexus_gold.dto;
+package com.rocketeers.nexus_gold.dto.authenrication;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EmailVerificationResponse {
+public class JwtAuthenticationResponse {
     private boolean success;
     private String message;
+    private String accessToken;
+    private String refreshToken;
 }

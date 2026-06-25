@@ -1,4 +1,4 @@
-package com.rocketeers.nexus_gold.dto;
+package com.rocketeers.nexus_gold.dto.verify_rest_code;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

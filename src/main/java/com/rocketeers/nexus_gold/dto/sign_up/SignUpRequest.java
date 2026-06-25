@@ -1,4 +1,4 @@
-package com.rocketeers.nexus_gold.dto;
+package com.rocketeers.nexus_gold.dto.sign_up;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
