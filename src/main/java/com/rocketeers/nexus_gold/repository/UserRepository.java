@@ -1,6 +1,6 @@
 package com.rocketeers.nexus_gold.repository;
 
-import com.rocketeers.nexus_gold.enums.Roles;
+import com.rocketeers.nexus_gold.model.Role;
 import com.rocketeers.nexus_gold.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,7 +11,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByDisplayName(String displayName);
 
-    User findByRole(Roles role);
-
-    Optional<User> findByPasswordResetToken(String passwordResetToken);
+    Optional<User> findByRole(Role role);
 }

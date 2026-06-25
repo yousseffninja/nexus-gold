@@ -1,7 +1,7 @@
 package com.rocketeers.nexus_gold.service.impl;
 
-import com.rocketeers.nexus_gold.dto.ChangePasswordRequest;
-import com.rocketeers.nexus_gold.dto.ChangePasswordResponse;
+import com.rocketeers.nexus_gold.dto.change_passoword.ChangePasswordRequest;
+import com.rocketeers.nexus_gold.dto.change_passoword.ChangePasswordResponse;
 import com.rocketeers.nexus_gold.model.User;
 import com.rocketeers.nexus_gold.repository.UserRepository;
 import com.rocketeers.nexus_gold.service.UserService;

@@ -1,9 +1,15 @@
 package com.rocketeers.nexus_gold.service.impl;
 
-import com.rocketeers.nexus_gold.dto.*;
-import com.rocketeers.nexus_gold.enums.Roles;
-import com.rocketeers.nexus_gold.model.User;
-import com.rocketeers.nexus_gold.repository.UserRepository;
+import com.rocketeers.nexus_gold.dto.authenrication.*;
+import com.rocketeers.nexus_gold.dto.email_verfication.EmailVerificationCodeRequest;
+import com.rocketeers.nexus_gold.dto.email_verfication.EmailVerificationResponse;
+import com.rocketeers.nexus_gold.dto.sign_in.SignInRequest;
+import com.rocketeers.nexus_gold.dto.sign_up.SignUpAuthenticationResponse;
+import com.rocketeers.nexus_gold.dto.sign_up.SignUpRequest;
+import com.rocketeers.nexus_gold.dto.verify_rest_code.VerifyResetCodeRequest;
+import com.rocketeers.nexus_gold.dto.verify_rest_code.VerifyResetCodeResponse;
+import com.rocketeers.nexus_gold.model.*;
+import com.rocketeers.nexus_gold.repository.*;
 import com.rocketeers.nexus_gold.service.AuthenticationService;
 import com.rocketeers.nexus_gold.service.EmailService;
 import com.rocketeers.nexus_gold.service.JwtService;
@@ -36,6 +42,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final EmailService emailService;
 
+    private final RoleRepository roleRepository;
+
+    private final VerificationCodeRepository verificationCodeRepository;
+
+    private final RefreshTokenRepository refreshTokenRepository;
+
     @Value("${app.email.verification.expiration-minutes:15}")
     private long emailVerificationExpirationMinutes;
 
@@ -62,19 +74,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .build();
         }
 
+        Role userRole = roleRepository.findByName("USER")
+                .orElseThrow(() -> new IllegalStateException("USER role not found"));
+
         User user = new User();
         user.setEmail(signUpRequest.getEmail().toLowerCase());
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
         user.setDisplayName(signUpRequest.getDisplayName());
         user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        user.setRole(Roles.USER);
+        user.setRole(userRole);
         user.setEmailVerified(false);
 
         String verificationCode = generateVerificationCode();
-        setEmailVerificationCode(user, verificationCode);
+        VerificationCode verificationCodeEntity = createVerificationCode(user, verificationCode, VerificationCode.VerificationCodeType.EMAIL_VERIFICATION);
 
         User savedUser = userRepository.save(user);
+        verificationCodeRepository.save(verificationCodeEntity);
         String message = "User registered successfully. Verification code sent to email.";
 
         try {
@@ -166,8 +182,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         String verificationCode = generateVerificationCode();
-        setEmailVerificationCode(user, verificationCode);
-        userRepository.save(user);
+        VerificationCode verificationCodeEntity = createVerificationCode(user, verificationCode, VerificationCode.VerificationCodeType.EMAIL_VERIFICATION);
+        verificationCodeRepository.save(verificationCodeEntity);
 
         try {
             emailService.sendVerificationCode(user.getEmail().toLowerCase(), verificationCode);
@@ -213,21 +229,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .build();
         }
 
-        if (user.getEmailVerificationCode() == null || user.getEmailVerificationCodeExpiresAt() == null) {
+        VerificationCode verificationCodeEntity = verificationCodeRepository
+                .findByUserAndTypeAndUsedFalse(user, VerificationCode.VerificationCodeType.EMAIL_VERIFICATION)
+                .orElse(null);
+
+        if (verificationCodeEntity == null) {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("No verification code found. Please request a new code.")
                     .build();
         }
 
-        if (LocalDateTime.now().isAfter(user.getEmailVerificationCodeExpiresAt())) {
+        if (LocalDateTime.now().isAfter(verificationCodeEntity.getExpiresAt())) {
+            verificationCodeEntity.setUsed(true);
+            verificationCodeRepository.save(verificationCodeEntity);
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("Verification code expired. Please request a new code.")
                     .build();
         }
 
-        if (!passwordEncoder.matches(code, user.getEmailVerificationCode())) {
+        if (!passwordEncoder.matches(code, verificationCodeEntity.getCode())) {
             return EmailVerificationResponse.builder()
                     .success(false)
                     .message("Invalid verification code")
@@ -235,8 +257,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         user.setEmailVerified(true);
-        user.setEmailVerificationCode(null);
-        user.setEmailVerificationCodeExpiresAt(null);
+        verificationCodeEntity.setUsed(true);
+        verificationCodeRepository.save(verificationCodeEntity);
         userRepository.save(user);
 
         return EmailVerificationResponse.builder()
@@ -264,9 +286,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
        String resetCode = generateVerificationCode();
 
-       user.setPasswordResetCode(passwordEncoder.encode(resetCode));
-       user.setPasswordResetCodeExpiresAt(LocalDateTime.now().plusMinutes(passwordResetExpirationMinutes));
-       userRepository.save(user);
+       VerificationCode verificationCodeEntity = createVerificationCode(user, resetCode, VerificationCode.VerificationCodeType.PASSWORD_RESET);
+       verificationCodeRepository.save(verificationCodeEntity);
 
        try{
            emailService.sendPasswordResetCode(user.getEmail().toLowerCase(), resetCode);
@@ -295,24 +316,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null || user.getPasswordResetCode() == null || user.getPasswordResetCodeExpiresAt() == null) {
+        VerificationCode verificationCodeEntity = verificationCodeRepository
+                .findByUserAndTypeAndUsedFalse(user, VerificationCode.VerificationCodeType.PASSWORD_RESET)
+                .orElse(null);
+
+        if (user == null || verificationCodeEntity == null) {
             return VerifyResetCodeResponse.builder().success(false).message("Something went wrong. Please try again later.").build();
         }
 
-        if (LocalDateTime.now().isAfter(user.getPasswordResetCodeExpiresAt())) {
-            user.setPasswordResetCode(null);
-            user.setPasswordResetCodeExpiresAt(null);
-            userRepository.save(user);
+        if (LocalDateTime.now().isAfter(verificationCodeEntity.getExpiresAt())) {
+            verificationCodeEntity.setUsed(true);
+            verificationCodeRepository.save(verificationCodeEntity);
             return VerifyResetCodeResponse.builder().success(false).message("Code has expired. Please request a new code.").build();
         }
 
-        if (!passwordEncoder.matches(code, user.getPasswordResetCode())) {
+        if (!passwordEncoder.matches(code, verificationCodeEntity.getCode())) {
             return VerifyResetCodeResponse.builder().success(false).message("Invalid verification code").build();
         }
 
         String resetToken = generateResetToken();
-        user.setPasswordResetToken(resetToken);
-        userRepository.save(user);
+        verificationCodeEntity.setUsed(true);
+        verificationCodeRepository.save(verificationCodeEntity);
 
         return VerifyResetCodeResponse.builder().success(true).message("Code verified successfully").passwordResetToken(resetToken).build();
     }
@@ -320,12 +344,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
-        String passwordResetToken = util.normalize(request == null ? null : request.getPasswordResetToken());
+        String email = util.normalize(request == null ? null : request.getEmail());
         String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
-        if (!util.hasText(passwordResetToken)) {
+        if (!util.hasText(email)) {
             return PasswordResetResponse.builder()
-                    .success(false).message("Password reset token is required").build();
+                    .success(false).message("Email is required").build();
         }
 
         if (!util.hasText(newPassword)) {
@@ -333,16 +357,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .success(false).message("New password is required").build();
         }
 
-        User user = userRepository.findByPasswordResetToken(passwordResetToken).orElse(null);
+        User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return PasswordResetResponse.builder().success(false).message("Invalid or expired token").build();
+            return PasswordResetResponse.builder().success(false).message("User not found").build();
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
-
-        user.setPasswordResetCode(null);
-        user.setPasswordResetCodeExpiresAt(null);
-        user.setPasswordResetToken(null);
         userRepository.save(user);
 
         return PasswordResetResponse.builder().success(true).message("Password reset successfully").build();
@@ -358,9 +378,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return java.util.UUID.randomUUID().toString();
     }
 
-    private void setEmailVerificationCode(User user, String verificationCode) {
-        user.setEmailVerificationCode(passwordEncoder.encode(verificationCode));
-        user.setEmailVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(emailVerificationExpirationMinutes));
+    private VerificationCode createVerificationCode(User user, String code, VerificationCode.VerificationCodeType type) {
+        return VerificationCode.builder()
+                .code(passwordEncoder.encode(code))
+                .type(type)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusMinutes(
+                        type == VerificationCode.VerificationCodeType.EMAIL_VERIFICATION 
+                                ? emailVerificationExpirationMinutes 
+                                : passwordResetExpirationMinutes))
+                .used(false)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 
 

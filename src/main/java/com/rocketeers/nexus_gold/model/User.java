@@ -1,7 +1,6 @@
 package com.rocketeers.nexus_gold.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.rocketeers.nexus_gold.enums.Roles;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +10,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -40,9 +38,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.ORDINAL)
-    private Roles role;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(
             name = "display_name",
@@ -55,29 +53,17 @@ public class User implements UserDetails {
     @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default false")
     private boolean emailVerified = false;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    @Column(name = "email_verification_code")
-    private String emailVerificationCode;
+    private List<VerificationCode> verificationCodes;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    @Column(name = "email_verification_code_expires_at")
-    private LocalDateTime emailVerificationCodeExpiresAt;
-
-    @JsonIgnore
-    @Column(name = "password_Reset_token")
-    private String passwordResetToken;
-
-    @JsonIgnore
-    @Column(name = "password_Reset_code")
-    private String passwordResetCode;
-
-    @JsonIgnore
-    @Column(name = "password_Reset_code_expires_at")
-    private LocalDateTime passwordResetCodeExpiresAt;
+    private List<RefreshToken> refreshTokens;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.getName()));
     }
 
     @Override
