@@ -40,59 +40,43 @@ public class UserServiceImpl implements UserService {
         String newPassword = util.normalize(request == null ? null :request.getNewPassword());
 
         if (user == null) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("Authenticated user is required")
-                    .build();
+            return toChangePasswordResponse("Authenticated user is required", false);
         }
 
         if (request == null || !util.hasText(request.getCurrentPassword())) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("Current password is required")
-                    .build();
+            return toChangePasswordResponse("Current password is required", false);
         }
 
         if (!util.hasText(request.getNewPassword())) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("New password is required")
-                    .build();
+            return toChangePasswordResponse("New password is required", false);
         }
 
         if (request.getNewPassword().length() < 8) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("New password must be at least 8 characters")
-                    .build();
+            return toChangePasswordResponse("New password must be at least 8 characters", false);
         }
 
         User managedUser = userRepository.findByEmail(user.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), managedUser.getPassword())) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("Current password is incorrect")
-                    .build();
+            return toChangePasswordResponse("Current password is incorrect", false);
         }
 
         if (passwordEncoder.matches(request.getNewPassword(), managedUser.getPassword())) {
-            return ChangePasswordResponse.builder()
-                    .success(false)
-                    .message("New password must be different from current password")
-                    .build();
+            return toChangePasswordResponse("New password must be different from current password", false);
         }
 
         managedUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(managedUser);
 
-        return ChangePasswordResponse.builder()
-                .success(true)
-                .message("Password changed successfully")
-                .build();
+        return toChangePasswordResponse("Password changed successfully", true);
     }
 
-
+    private ChangePasswordResponse toChangePasswordResponse(String message, boolean success) {
+        return ChangePasswordResponse.builder()
+                .message(message)
+                .success(success)
+                .build();
+    }
 
 }

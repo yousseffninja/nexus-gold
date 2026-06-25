@@ -9,6 +9,6 @@ import java.util.List;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    List<Category> findAllByGameIdAndActiveTrue(String gameId);
+    List<Category> findAllByGameIdAndActiveTrue(long gameId);
 
 }

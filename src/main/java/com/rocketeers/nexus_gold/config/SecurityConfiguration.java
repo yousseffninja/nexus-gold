@@ -60,9 +60,11 @@ public class SecurityConfiguration {
                                 "/swagger-resources/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyAuthority(Roles.ADMIN.name())
-                        .requestMatchers("/api/v1/user/**").hasAnyAuthority(Roles.USER.name(), Roles.SELLER.name(), Roles.ADMIN.name())
-                        .requestMatchers("/api/v1/seller/**").hasAnyAuthority(Roles.SELLER.name(), Roles.ADMIN.name())
+                        .requestMatchers("/api/v1/games/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_" + Roles.ADMIN.name())
+                        .requestMatchers("/api/v1/categories/**").permitAll()
+                        .requestMatchers("/api/v1/user/**").hasAnyAuthority("ROLE_" + Roles.USER.name(), "ROLE_" + Roles.SELLER.name(), "ROLE_" + Roles.ADMIN.name())
+                        .requestMatchers("/api/v1/seller/**").hasAnyAuthority("ROLE_" + Roles.SELLER.name(), "ROLE_" + Roles.ADMIN.name())
                         .anyRequest().authenticated())
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider()).addFilterBefore(

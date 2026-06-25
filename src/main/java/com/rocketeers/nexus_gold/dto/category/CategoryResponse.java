@@ -1,5 +1,6 @@
 package com.rocketeers.nexus_gold.dto.category;
 
+import com.rocketeers.nexus_gold.enums.CategoryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Data
 public class CategoryResponse {
-    private UUID id;
+    private long id;
     private String name;
-    private String type;
+    private CategoryType type;
+    private String message;
+    private boolean success;
 }
