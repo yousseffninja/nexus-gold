@@ -59,19 +59,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest) {
 
         if (userRepository.findByEmail(signUpRequest.getEmail().toLowerCase()).isPresent()) {
-            return SignUpAuthenticationResponse.builder()
-                    .success(false)
-                    .message("Email is already in use")
-                    .data(null)
-                    .build();
+            return toSignUpResponse("Email is already in use", false, null);
         }
 
         if (userRepository.findByDisplayName(signUpRequest.getDisplayName()).isPresent()) {
-            return SignUpAuthenticationResponse.builder()
-                    .success(false)
-                    .message("Display name is already in use")
-                    .data(null)
-                    .build();
+            return toSignUpResponse("Display name is already in use", false, null);
         }
 
         Role userRole = roleRepository.findByName("USER")
@@ -99,11 +91,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             message = "User registered successfully, but verification email could not be sent. Please use send-verification-code after mail configuration is fixed.";
         }
 
-        return SignUpAuthenticationResponse.builder()
-                .success(true)
-                .message(message)
-                .data(savedUser)
-                .build();
+        return toSignUpResponse(message, true, savedUser);
     }
 
     public JwtAuthenticationResponse signIn(SignInRequest signInRequest) {
@@ -121,23 +109,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
 
         if (!user.isEmailVerified()) {
-            return JwtAuthenticationResponse.builder()
-                    .success(false)
-                    .message("Please verify your email before signing in")
-                    .accessToken(null)
-                    .refreshToken(null)
-                    .build();
+            return toJwtResponse("Please verify your email before signing in", false, null, null);
         }
 
         var jwt = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(new HashMap<>(), user);
 
-        return JwtAuthenticationResponse.builder()
-                .success(true)
-                .message("Signin successful")
-                .accessToken(jwt)
-                .refreshToken(refreshToken)
-                .build();
+        return toJwtResponse("Signin successful", true, jwt, refreshToken);
     }
 
     public JwtAuthenticationResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
@@ -146,39 +124,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         var newAccessToken = jwtService.generateToken(user);
-        return JwtAuthenticationResponse.builder()
-                .success(true)
-                .message("Token refreshed successfully")
-                .accessToken(newAccessToken)
-                .refreshToken(refreshTokenRequest.getToken())
-                .build();
+        return toJwtResponse("Token refreshed successfully", true, newAccessToken, refreshTokenRequest.getToken());
     }
 
     @Override
     public EmailVerificationResponse sendEmailVerificationCode(EmailVerificationCodeRequest request) {
         String email = util.normalize(request == null ? null : request.getEmail().toLowerCase());
         if (!util.hasText(email)) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Email is required")
-                    .build();
+            return toEmailVerificationResponse("Email is required", false);
         }
 
         User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("User not found")
-                    .build();
+            return toEmailVerificationResponse("User not found", false);
         }
 
         if (user.isEmailVerified()) {
-            return EmailVerificationResponse.builder()
-                    .success(true)
-                    .message("Email is already verified")
-                    .build();
+            return toEmailVerificationResponse("Email is already verified", true);
         }
 
         String verificationCode = generateVerificationCode();
@@ -188,16 +152,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         try {
             emailService.sendVerificationCode(user.getEmail().toLowerCase(), verificationCode);
         } catch (MailException e) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Failed to send verification code. Please try again later.")
-                    .build();
+            return toEmailVerificationResponse("Failed to send verification code. Please try again later.", false);
         }
 
-        return EmailVerificationResponse.builder()
-                .success(true)
-                .message("Verification code sent to email")
-                .build();
+        return toEmailVerificationResponse("Verification code sent to email", true);
     }
 
     @Override
@@ -206,27 +164,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String code = util.normalize(request == null ? null : request.getCode());
 
         if (!util.hasText(email)) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Email is required")
-                    .build();
+            return toEmailVerificationResponse("Email is required", false);
         }
 
         if (!util.hasText(code)) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Verification code is required")
-                    .build();
+            return toEmailVerificationResponse("Verification code is required", false);
         }
 
         User user = userRepository.findByEmail(email)
                 .orElse(null);
 
         if (user == null) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("User not found")
-                    .build();
+            return toEmailVerificationResponse("User not found", false);
         }
 
         VerificationCode verificationCodeEntity = verificationCodeRepository
@@ -234,26 +183,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .orElse(null);
 
         if (verificationCodeEntity == null) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("No verification code found. Please request a new code.")
-                    .build();
+            return toEmailVerificationResponse("No verification code found. Please request a new code.", false);
         }
 
         if (LocalDateTime.now().isAfter(verificationCodeEntity.getExpiresAt())) {
             verificationCodeEntity.setUsed(true);
             verificationCodeRepository.save(verificationCodeEntity);
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Verification code expired. Please request a new code.")
-                    .build();
+            return toEmailVerificationResponse("Verification code expired. Please request a new code.", false);
         }
 
         if (!passwordEncoder.matches(code, verificationCodeEntity.getCode())) {
-            return EmailVerificationResponse.builder()
-                    .success(false)
-                    .message("Invalid verification code")
-                    .build();
+            return toEmailVerificationResponse("Invalid verification code", false);
         }
 
         user.setEmailVerified(true);
@@ -261,10 +201,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         verificationCodeRepository.save(verificationCodeEntity);
         userRepository.save(user);
 
-        return EmailVerificationResponse.builder()
-                .success(true)
-                .message("Email verified successfully")
-                .build();
+        return toEmailVerificationResponse("Email verified successfully", true);
     }
 
     @Override
@@ -273,15 +210,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
        if (!util.hasText(email)) {
 
-           return  PasswordResetResponse.builder()
-                   .success(false).message(" Email is require").build();
+           return toPasswordResetResponse("Email is required", false);
        }
 
        User user = userRepository.findByEmail(email).orElse(null);
 
        if (user == null) {
-           return PasswordResetResponse.builder()
-                   .success(false).message("Email not found").build();
+           return toPasswordResetResponse("Email not found", false);
        }
 
        String resetCode = generateVerificationCode();
@@ -292,11 +227,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
        try{
            emailService.sendPasswordResetCode(user.getEmail().toLowerCase(), resetCode);
        } catch (MailException e){
-           return PasswordResetResponse.builder().success(false).message("Failed to send password reset code. Please try again later.").build();
+           return toPasswordResetResponse("Failed to send password reset code. Please try again later.", false);
 
        }
 
-        return  PasswordResetResponse.builder().success(true).message("If an account exists for this email, a password reset code has been sent.").build();
+        return toPasswordResetResponse("If an account exists for this email, a password reset code has been sent.", true);
 
     }
 
@@ -306,13 +241,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String code = util.normalize(request == null ? null : request.getCode());
 
         if (!util.hasText(email)) {
-            return VerifyResetCodeResponse.builder()
-                    .success(false).message("Email is required").build();
+            return toVerifyResetCodeResponse("Email is required", false, null);
         }
 
         if (!util.hasText(code)) {
-            return VerifyResetCodeResponse.builder()
-                    .success(false).message("Code is required").build();
+            return toVerifyResetCodeResponse("Code is required", false, null);
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
@@ -321,24 +254,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .orElse(null);
 
         if (user == null || verificationCodeEntity == null) {
-            return VerifyResetCodeResponse.builder().success(false).message("Something went wrong. Please try again later.").build();
+            return toVerifyResetCodeResponse("Something went wrong. Please try again later.", false, null);
         }
 
         if (LocalDateTime.now().isAfter(verificationCodeEntity.getExpiresAt())) {
             verificationCodeEntity.setUsed(true);
             verificationCodeRepository.save(verificationCodeEntity);
-            return VerifyResetCodeResponse.builder().success(false).message("Code has expired. Please request a new code.").build();
+            return toVerifyResetCodeResponse("Code has expired. Please request a new code.", false, null);
         }
 
         if (!passwordEncoder.matches(code, verificationCodeEntity.getCode())) {
-            return VerifyResetCodeResponse.builder().success(false).message("Invalid verification code").build();
+            return toVerifyResetCodeResponse("Invalid verification code", false, null);
         }
 
         String resetToken = generateResetToken();
         verificationCodeEntity.setUsed(true);
         verificationCodeRepository.save(verificationCodeEntity);
 
-        return VerifyResetCodeResponse.builder().success(true).message("Code verified successfully").passwordResetToken(resetToken).build();
+        return toVerifyResetCodeResponse("Code verified successfully", true, resetToken);
     }
 
 
@@ -348,24 +281,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String newPassword = util.normalize(request == null ? null : request.getNewPassword());
 
         if (!util.hasText(email)) {
-            return PasswordResetResponse.builder()
-                    .success(false).message("Email is required").build();
+            return toPasswordResetResponse("Email is required", false);
         }
 
         if (!util.hasText(newPassword)) {
-            return PasswordResetResponse.builder()
-                    .success(false).message("New password is required").build();
+            return toPasswordResetResponse("New password is required", false);
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return PasswordResetResponse.builder().success(false).message("User not found").build();
+            return toPasswordResetResponse("User not found", false);
         }
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        return PasswordResetResponse.builder().success(true).message("Password reset successfully").build();
+        return toPasswordResetResponse("Password reset successfully", true);
     }
 
 
@@ -392,6 +323,43 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .build();
     }
 
+    private SignUpAuthenticationResponse toSignUpResponse(String message, boolean success, Object data) {
+        return SignUpAuthenticationResponse.builder()
+                .message(message)
+                .success(success)
+                .data(data)
+                .build();
+    }
 
+    private JwtAuthenticationResponse toJwtResponse(String message, boolean success, String accessToken, String refreshToken) {
+        return JwtAuthenticationResponse.builder()
+                .message(message)
+                .success(success)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private EmailVerificationResponse toEmailVerificationResponse(String message, boolean success) {
+        return EmailVerificationResponse.builder()
+                .message(message)
+                .success(success)
+                .build();
+    }
+
+    private PasswordResetResponse toPasswordResetResponse(String message, boolean success) {
+        return PasswordResetResponse.builder()
+                .message(message)
+                .success(success)
+                .build();
+    }
+
+    private VerifyResetCodeResponse toVerifyResetCodeResponse(String message, boolean success, String passwordResetToken) {
+        return VerifyResetCodeResponse.builder()
+                .message(message)
+                .success(success)
+                .passwordResetToken(passwordResetToken)
+                .build();
+    }
 
 }

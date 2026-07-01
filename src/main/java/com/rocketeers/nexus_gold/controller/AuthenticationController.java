@@ -61,25 +61,7 @@ public class AuthenticationController {
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    JwtAuthenticationResponse.builder()
-                            .success(false)
-                            .message("Invalid credentials")
-                            .accessToken(null)
-                            .refreshToken(null)
-                            .build()
-            );
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    JwtAuthenticationResponse.builder()
-                            .success(false)
-                            .message("Invalid credentials")
-                            .accessToken(null)
-                            .refreshToken(null)
-                            .build()
-            );
-        } catch (IllegalArgumentException e) {
+        } catch (AuthenticationException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
                             .success(false)
@@ -105,15 +87,6 @@ public class AuthenticationController {
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    JwtAuthenticationResponse.builder()
-                            .success(false)
-                            .message("Invalid or expired refresh token")
-                            .accessToken(null)
-                            .refreshToken(null)
-                            .build()
-            );
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                     JwtAuthenticationResponse.builder()
