@@ -14,6 +14,4 @@ public class GameRequest {
     @NotBlank(message = "Slug is mandatory")
     private String slug;
 
-    @Schema(example = "imgurl.com", description = "Image of category")
-    private String iconUrl;
 }

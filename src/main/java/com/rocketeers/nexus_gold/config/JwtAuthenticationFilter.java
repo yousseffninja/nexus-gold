@@ -62,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = userService
                     .userDetailsService()
                     .loadUserByUsername(userEmail);
-            boolean skipEmailVerification = path.equals("/api/v1/auth/change-password");
+            boolean skipEmailVerification = path.equals("/api/v1/auth/change-password") || path.startsWith("/api/v1/admin/");
             if ((isEmailVerified(userDetails) || skipEmailVerification) && jwtService.isTokenValid(jwt, userDetails)) {
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
 

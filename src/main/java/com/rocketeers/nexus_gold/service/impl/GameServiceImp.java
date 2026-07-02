@@ -6,10 +6,12 @@ import com.rocketeers.nexus_gold.exception.ConflictException;
 import com.rocketeers.nexus_gold.exception.ResourceNotFoundException;
 import com.rocketeers.nexus_gold.model.Game;
 import com.rocketeers.nexus_gold.repository.GameRepository;
+import com.rocketeers.nexus_gold.service.CloudinaryService;
 import com.rocketeers.nexus_gold.service.GameService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -18,6 +20,8 @@ import java.util.List;
 public class GameServiceImp implements GameService {
 
     private final GameRepository gameRepository;
+    private final CloudinaryService cloudinaryService;
+
 
     @Override
     public List<GameResponse> getAllActiveGames() {
@@ -36,21 +40,22 @@ public class GameServiceImp implements GameService {
 
     @Transactional
     @Override
-    public GameResponse createGame(GameRequest request) {
+    public GameResponse createGame(GameRequest request, MultipartFile icon) {
         if (gameRepository.existsBySlug(request.getSlug())) {
             throw new ConflictException("Game with slug " + request.getSlug() + " already exists");
         }
 
+        String iconUrl = cloudinaryService.uploadImage(icon, "games");
+
         Game game = new Game();
         game.setName(request.getName());
         game.setSlug(request.getSlug());
-        game.setIconUrl(request.getIconUrl());
+        game.setIconUrl(iconUrl);
         game.setActive(true);
 
         Game saved = gameRepository.save(game);
 
         return toResponse(saved, "Game created successfully", true);
-
     }
 
     @Transactional
