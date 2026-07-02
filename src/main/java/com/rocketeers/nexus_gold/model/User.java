@@ -1,6 +1,6 @@
 package com.rocketeers.nexus_gold.model;
 
-import com.rocketeers.nexus_gold.enums.Roles;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,12 +34,13 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.ORDINAL)
-    private Roles role;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(
             name = "display_name",
@@ -48,9 +49,21 @@ public class User implements UserDetails {
     )
     private String displayName;
 
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default false")
+    private boolean emailVerified = false;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<VerificationCode> verificationCodes;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<RefreshToken> refreshTokens;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.getName()));
     }
 
     @Override
@@ -78,4 +91,3 @@ public class User implements UserDetails {
         return UserDetails.super.isEnabled();
     }
 }
-
