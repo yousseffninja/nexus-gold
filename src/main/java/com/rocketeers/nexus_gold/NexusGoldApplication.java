@@ -10,6 +10,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.List;
+
 @SpringBootApplication
 public class NexusGoldApplication implements CommandLineRunner {
 
@@ -30,8 +32,8 @@ public class NexusGoldApplication implements CommandLineRunner {
 			roleRepository.save(adminRole);
 		}
 
-		User adminAccount = userRepository.findByRole(adminRole).orElse(null);
-		if (adminAccount == null) {
+		List<User> adminAccounts = userRepository.findByRole(adminRole);
+		if (adminAccounts.isEmpty()) {
 
 			User user = new User();
 
