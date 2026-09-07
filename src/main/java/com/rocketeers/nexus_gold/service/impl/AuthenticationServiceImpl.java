@@ -21,6 +21,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,20 +34,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final AuthenticationManager authenticationManager;
-
     private final JwtService jwtService;
-
     private final EmailService emailService;
-
     private final RoleRepository roleRepository;
-
     private final VerificationCodeRepository verificationCodeRepository;
-
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserProfileRepository userProfileRepository; // ← NEW
 
     @Value("${app.email.verification.expiration-minutes:15}")
     private long emailVerificationExpirationMinutes;
@@ -56,6 +51,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private Util util = new Util();
 
+    @Transactional
     public SignUpAuthenticationResponse signUp(SignUpRequest signUpRequest) {
 
         if (userRepository.findByEmail(signUpRequest.getEmail().toLowerCase()).isPresent()) {
@@ -82,7 +78,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         VerificationCode verificationCodeEntity = createVerificationCode(user, verificationCode, VerificationCode.VerificationCodeType.EMAIL_VERIFICATION);
 
         User savedUser = userRepository.save(user);
+
+        UserProfile profile = UserProfile.builder()
+                .user(savedUser)
+                .build();
+        userProfileRepository.save(profile);
+
+
         verificationCodeRepository.save(verificationCodeEntity);
+
         String message = "User registered successfully. Verification code sent to email.";
 
         try {
@@ -274,7 +278,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return toVerifyResetCodeResponse("Code verified successfully", true, resetToken);
     }
 
-
     @Override
     public PasswordResetResponse resetPassword(ResetPasswordRequest request){
         String email = util.normalize(request == null ? null : request.getEmail());
@@ -298,8 +301,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         return toPasswordResetResponse("Password reset successfully", true);
     }
-
-
 
     private String generateVerificationCode() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
@@ -361,5 +362,4 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .passwordResetToken(passwordResetToken)
                 .build();
     }
-
 }

@@ -61,6 +61,8 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/games/**").permitAll()
+                        .requestMatchers("/api/v1/listings/**").permitAll()  // ← ADD THIS
+                        .requestMatchers("/api/v1/user/profile/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_" + Roles.ADMIN.name())
                         .requestMatchers("/api/v1/categories/**").permitAll()
                         .requestMatchers("/api/v1/user/**").hasAnyAuthority("ROLE_" + Roles.USER.name(), "ROLE_" + Roles.SELLER.name(), "ROLE_" + Roles.ADMIN.name())
